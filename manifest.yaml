@@ -1,0 +1,70 @@
+---
+# Source: helm/templates/namespace.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: minikube-sample
+---
+# Source: helm/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: minikube-sample-service
+  namespace: minikube-sample
+spec:
+  type: NodePort
+  ports:
+    - port: 3000
+      targetPort: 3000
+  selector:
+    app: minikube-sample
+
+---
+# Source: helm/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: minikube-sample
+  namespace: minikube-sample
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: minikube-sample
+  template:
+    metadata:
+      labels:
+        app: minikube-sample
+    spec:
+      containers:
+        - name: minikube-sample
+          image: 127.0.0.1:5000/minikube-sample:v0.0.1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3000
+          readinessProbe:
+            httpGet:
+              port: 3000
+              path: /
+            timeoutSeconds: 10
+
+---
+# Source: helm/templates/ingress.yaml
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: minikube-sample-ingress
+  namespace: minikube-sample
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$1
+spec:
+  rules:
+    - host: minikube-sample.local
+      http:
+        paths:
+          - path: /
+            backend:
+              serviceName: minikube-sample-service
+              servicePort: 3000
+
